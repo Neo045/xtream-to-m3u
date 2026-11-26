@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xtream2m3u - Playlist Generator</title>
+    <meta name="description" content="Convert Xtream IPTV APIs into customizable M3U playlists">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <img src="/assets/logo.png" alt="xtream2m3u Logo">
+            </div>
+            <h1>Xtream <span class="brand-arrow">→</span> M3U</h1>
+            <p class="subtitle">Advanced playlist extractor · Live TV · VOD · Series</p>
+        </header>
+
+        <!-- Step 1: Credentials -->
+        <section class="step active" id="step1">
+            <div class="card">
+                <div class="card-header">
+                    <span>🔐 Service Credentials</span>
+                </div>
+                <div class="card-body">
+                    <form id="credentialsForm" onsubmit="event.preventDefault(); loadCategories();">
+                        <div class="form-group">
+                            <label for="url">Service URL (DNS)</label>
+                            <input type="url" id="url" placeholder="http://iptv.provider.com:8080" required autocomplete="url">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" placeholder="Enter your username" required autocomplete="username">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password">
+                        </div>
+
+                        <div class="form-group">
+                            <label style="margin-bottom: 0.5rem;">Content Types</label>
+                            <div class="checkbox-wrapper">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="includeLive" checked>
+                                    <div class="checkmark"></div>
+                                    <div class="checkbox-text">
+                                        <strong>Live Channels</strong>
+                                        <small>Fast — always recommended</small>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="checkbox-wrapper">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="includeVod">
+                                    <div class="checkmark"></div>
+                                    <div class="checkbox-text">
+                                        <strong>Movies (VOD)</strong>
+                                        <small>Adds movies — moderate load time</small>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="checkbox-wrapper">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="includeSeries">
+                                    <div class="checkmark"></div>
+                                    <div class="checkbox-text">
+                                        <strong>TV Series</strong>
+                                        <small>Episode data is slow — minutes to hours</small>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="loadBtn">
+                                <span id="loadCategoriesText">Connect & Load Categories</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loading State -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p id="loadingText">Connecting to service...</p>
+        </div>
+
+        <!-- Step 2: Category Selection -->
+        <section class="step" id="step2">
+            <div class="card">
+                <div class="card-header">
+                    <span>📁 Customize Playlist</span>
+                </div>
+                <div class="card-body">
+                    <div class="toolbar">
+                        <div class="filter-mode">
+                            <label>
+                                <input type="radio" name="filterMode" value="include" checked>
+                                <span>Include Selected</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="filterMode" value="exclude">
+                                <span>Exclude Selected</span>
+                            </label>
+                        </div>
+                        <div class="search-box">
+                            <input type="text" id="categorySearch" placeholder="Search categories..." autocomplete="off">
+                            <span class="search-icon">🔍</span>
+                        </div>
+                    </div>
+
+                    <button type="button" id="allCategoriesCard" class="all-categories-card active" aria-pressed="true" onclick="chooseAllCategories()">
+                        <span class="all-categories-copy"><strong>✦ All Categories</strong><small>Include every available category in this playlist</small></span>
+                        <span class="all-categories-check">✓</span>
+                    </button>
+
+                    <div class="selection-counter" id="selectionCounter">
+                        <span id="selectionText">Select categories to include in your playlist</span>
+                        <div class="selection-actions">
+                             <button class="btn-text" onclick="selectAllVisible()">Select Visible</button>
+                             <button class="btn-text" onclick="clearSelection()">Clear Selection</button>
+                        </div>
+                    </div>
+
+                    <div class="category-chips" id="categoryChips">
+                        <!-- Categories populated via JS -->
+                    </div>
+
+                    <div class="export-settings">
+                        <div class="form-group export-name-group">
+                            <label for="playlistFilename">Playlist filename</label>
+                            <input type="text" id="playlistFilename" value="shihab_playlist.m3u" maxlength="80" placeholder="shihab_playlist.m3u" autocomplete="off">
+                            <small>File will be downloaded as an M3U playlist.</small>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="goBackToStep1()">
+                            Back
+                        </button>
+                        <button class="btn btn-secondary" onclick="showApiBuilder()">
+                            🛠️ API Builder
+                        </button>
+                        <button class="btn btn-success" onclick="showConfirmation()">
+                            Generate Playlist
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 3: Success -->
+        <section class="step" id="step3">
+            <div class="card">
+                <div class="success-state">
+                    <div class="success-checkmark">✓</div>
+                    <h2 class="success-title">Playlist Ready!</h2>
+                    <p class="success-message">Your custom M3U playlist has been generated successfully.</p>
+
+                    <div class="success-actions">
+                        <a class="btn btn-success download-link" id="finalDownloadLink">
+                            <span>📥 Download .m3u</span>
+                        </a>
+                        <button class="btn btn-primary" onclick="startOver()">
+                            Create Another
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- API Builder Modal -->
+        <div class="modal" id="apiBuilderModal">
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h3>🛠️ API URL Builder</h3>
+                    <p class="subtitle" style="font-size: 0.9rem; margin-bottom: 1rem;">Use this URL to fetch your custom playlist directly from any player.</p>
+                </div>
+
+                <div class="api-options">
+                   <div class="form-group">
+                       <label>Endpoint Type</label>
+                       <div class="filter-mode">
+                           <label>
+                               <input type="radio" name="apiType" value="m3u" checked onchange="updateApiUrl()">
+                               <span>M3U Playlist</span>
+                           </label>
+                           <label>
+                               <input type="radio" name="apiType" value="xmltv" onchange="updateApiUrl()">
+                               <span>XMLTV EPG</span>
+                           </label>
+                       </div>
+                   </div>
+
+                   <!-- Additional Options (only for M3U) -->
+                   <div id="m3uOptions">
+                       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                           <div class="checkbox-wrapper" title="Disables stream proxying. URLs will point directly to the IPTV provider.">
+                               <label class="checkbox-label" style="padding: 0.5rem;">
+                                   <input type="checkbox" id="apiNoStreamProxy" checked onchange="updateApiUrl()">
+                                   <div class="checkmark"></div>
+                                   <div class="checkbox-text"><small>No Stream Proxy</small></div>
+                               </label>
+                           </div>
+                           <div class="checkbox-wrapper" title="Includes the unique 'channel-id' tag in the playlist. Useful for some players.">
+                               <label class="checkbox-label" style="padding: 0.5rem;">
+                                   <input type="checkbox" id="apiIncludeChannelId" onchange="updateApiUrl()">
+                                   <div class="checkmark"></div>
+                                   <div class="checkbox-text"><small>Include Channel ID</small></div>
+                               </label>
+                           </div>
+                           <div class="checkbox-wrapper" title="Emits catchup/timeshift tags for channels with archive support. Catchup channels bypass the stream proxy so players can build timeshift URLs.">
+                               <label class="checkbox-label" style="padding: 0.5rem;">
+                                   <input type="checkbox" id="apiEnableCatchup" onchange="updateApiUrl()">
+                                   <div class="checkmark"></div>
+                                   <div class="checkbox-text"><small>Enable Catchup</small></div>
+                               </label>
+                           </div>
+                           <div class="checkbox-wrapper" title="Omits the tvg-id tag on live channels. Some players (e.g. Emby) show tvg-id as a channel number — enable this if you don't want one.">
+                               <label class="checkbox-label" style="padding: 0.5rem;">
+                                   <input type="checkbox" id="apiNoTvgId" onchange="updateApiUrl()">
+                                   <div class="checkmark"></div>
+                                   <div class="checkbox-text"><small>No Channel Number</small></div>
+                               </label>
+                           </div>
+                       </div>
+
+                       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                           <div class="form-group" style="margin-bottom: 0;" title="Optional: Custom base URL for proxied content. Useful for reverse proxies.">
+                               <label style="font-size: 0.8rem; margin-bottom: 0.25rem;">Proxy URL (Optional)</label>
+                               <input type="text" id="apiProxyUrl" placeholder="http://your-domain.com" oninput="updateApiUrl()" style="padding: 0.5rem; font-size: 0.9rem;">
+                           </div>
+                           <div class="form-group" style="margin-bottom: 0;" title="Optional: Custom tag name for the channel ID (default: channel-id).">
+                               <label style="font-size: 0.8rem; margin-bottom: 0.25rem;">Channel ID Tag (Optional)</label>
+                               <input type="text" id="apiChannelIdTag" placeholder="channel-id" oninput="updateApiUrl()" style="padding: 0.5rem; font-size: 0.9rem;">
+                           </div>
+                       </div>
+                   </div>
+                </div>
+
+                <div class="api-url-container">
+                    <label>Generated URL</label>
+                    <div class="url-display-box">
+                        <code id="generatedApiUrl">https://...</code>
+                        <button class="btn-copy" onclick="copyApiUrl()">📋</button>
+                    </div>
+                </div>
+
+                <div class="api-url-container" id="cliCommandContainer" style="margin-top: 1rem;">
+                    <label>CLI Command <small style="opacity: 0.7;">— set XTREAM_URL / XTREAM_USERNAME / XTREAM_PASSWORD first</small></label>
+                    <div class="url-display-box">
+                        <code id="generatedCliCommand">python cli.py ...</code>
+                        <button class="btn-copy" onclick="copyCliCommand()">📋</button>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="margin-top: 1.5rem;">
+                    <button class="btn btn-secondary" onclick="closeApiBuilder()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div class="modal" id="confirmationModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Review & Generate</h3>
+                </div>
+                <div class="modal-summary" id="modalSummary">
+                    <!-- Summary populated via JS -->
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button class="btn btn-success" onclick="confirmGeneration()">Generate</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
